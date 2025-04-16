@@ -6,42 +6,27 @@ RUN npm ci
 COPY frontend/ ./
 RUN npm run build
 
-# Stage 2: Backend (PyTorch base)
-FROM pytorch/pytorch:2.1.0-cuda12.1-cudnn8-runtime AS backend
+# Stage 2: Backend (CUDA + Python)
+FROM nvidia/cuda:12.2.0-runtime-ubuntu22.04 AS backend
 WORKDIR /app
 
-# Create non-root user for security
-RUN adduser --disabled-password --gecos "" appuser
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Python dependencies
+# System dependencies
 COPY requirements.txt ./
-RUN apt-get update && apt-get install -y git \
-    && pip install --no-cache-dir -r requirements.txt \
-    && pip install uvicorn sse-starlette
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3-pip python3-venv python3-dev git g++ \
+    && python3 -m pip install --upgrade pip \
+    && python3 -m pip install --no-cache-dir -r requirements.txt \
+    && apt-get remove -y python3-dev g++ \
+    && apt-get autoremove -y \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /root/.cache/pip
 
-# Copy application code
-COPY --chown=appuser:appuser main.py inference.py ./
+# Copy backend code
+COPY . .
+# Copy frontend build
+COPY --from=frontend-build /app/frontend/dist /app/static
 
-# Copy frontend build from previous stage
-COPY --from=frontend-build --chown=appuser:appuser /app/frontend/dist /app/static
-
-# Set environment variables
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PORT=8000
-
-# Switch to non-root user
-USER appuser
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:${PORT}/ || exit 1
-
-EXPOSE ${PORT}
+ENV PYTHONUNBUFFERED=1 PORT=8000
+ENV TORCHINDUCTOR_DISABLE=1
+EXPOSE 8000
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

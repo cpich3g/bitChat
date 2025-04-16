@@ -1,4 +1,4 @@
 fastapi
+torch
 uvicorn
 git+https://github.com/shumingma/transformers.git
-
