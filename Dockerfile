@@ -15,7 +15,7 @@ COPY requirements.txt ./
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-pip python3-venv python3-dev git g++ \
     && python3 -m pip install --upgrade pip \
-    && python3 -m pip install --no-cache-dir -r requirements.txt \
+    && python3 -m pip install --no-cache-dir -r requirements.txt 
     # && apt-get remove -y python3-dev g++ \
     # && apt-get autoremove -y \
     # && apt-get clean \
