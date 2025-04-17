@@ -1,0 +1,46 @@
+name: Build and Push Docker Image to Azure Container Registries
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: bitchat
+      DOCKERFILE_PATH: Dockerfile.shared
+      CONTEXT: .
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Azure Container Registry 1
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ secrets.ACR1_LOGIN_SERVER }}
+          username: ${{ secrets.ACR1_USERNAME }}
+          password: ${{ secrets.ACR1_PASSWORD }}
+
+      - name: Log in to Azure Container Registry 2
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ secrets.ACR2_LOGIN_SERVER }}
+          username: ${{ secrets.ACR2_USERNAME }}
+          password: ${{ secrets.ACR2_PASSWORD }}
+
+      - name: Build and push Docker image to both registries
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ env.CONTEXT }}
+          file: ${{ env.DOCKERFILE_PATH }}
+          push: true
+          tags: |
+            ${{ secrets.ACR1_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
+            ${{ secrets.ACR2_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
+
