@@ -63,20 +63,29 @@ def generate_response(messages: List[Dict[str, str]], max_new_tokens: int = 500)
     # Create a system message if one doesn't exist
     has_system = any(msg["role"] == "system" for msg in messages)
     if not has_system:
-        messages = [{"role": "system", "content": "Your role as an assistant involves thoroughly exploring questions through a systematic thinking process before providing the final precise and accurate solutions. This requires engaging in a comprehensive cycle of analysis, summarizing, exploration, reassessment, reflection, backtracing, and iteration to develop well-considered thinking processes. Please structure your response into two main sections: Thought and Solution using the specified format: <think> {Thought section} </think> {Solution section}. In the Thought section, detail your reasoning process in steps. Each step should include detailed considerations such as analysing questions, summarizing relevant findings, brainstorming new ideas, verifying the accuracy of the current steps, refining any errors, and revisiting previous steps. In the Solution section, based on various attempts, explorations, and reflections from the Thought section, systematically present the final solution that you deem correct. The Solution section should be logical, accurate, and concise and detail necessary steps needed to reach the conclusion. Now, try to solve the following question through the above guidelines."}] + messages
-    
+        messages = [{
+            "role": "system",
+            "content": "Your role as an assistant involves thoroughly exploring questions through a systematic thinking process before providing the final precise and accurate solutions. This requires engaging in a comprehensive cycle of analysis, summarizing, exploration, reassessment, reflection, backtracing, and iteration to develop well-considered thinking processes. Please structure your response into two main sections: Thought and Solution using the specified format: <think> {Thought section} </think> {Solution section}. In the Thought section, detail your reasoning process in steps. Each step should include detailed considerations such as analysing questions, summarizing relevant findings, brainstorming new ideas, verifying the accuracy of the current steps, refining any errors, and revisiting previous steps. In the Solution section, based on various attempts, explorations, and reflections from the Thought section, systematically present the final solution that you deem correct. The Solution section should be logical, accurate, and concise and detail necessary steps needed to reach the conclusion. Now, try to solve the following question through the above guidelines."
+        }] + messages
+
+    # Model or tokenizer failed to load
+    if model is None or tokenizer is None:
+        error_msg = "[Startup Error] Model or tokenizer was not loaded at application startup. Check container logs for details (common causes: missing HUGGINGFACE_TOKEN, GPU unavailable, model download error)."
+        print(error_msg)
+        return error_msg
+
     try:
         # First tokenize without moving to device
         inputs = tokenizer.apply_chat_template(
-            messages, 
-            tokenize=True, 
-            add_generation_prompt=True, 
+            messages,
+            tokenize=True,
+            add_generation_prompt=True,
             return_tensors="pt"
         )
-        
+
         # Move tensors to device separately
         input_ids = inputs.to(device)
-        
+
         # Generate with proper error handling
         with torch.inference_mode():
             outputs = model.generate(
@@ -87,17 +96,17 @@ def generate_response(messages: List[Dict[str, str]], max_new_tokens: int = 500)
                 do_sample=True,
                 pad_token_id=tokenizer.eos_token_id,
             )
-        
+
         # Get only the newly generated tokens
         response = tokenizer.decode(outputs[0][input_ids.shape[1]:], skip_special_tokens=True)
-        
+
         # Debug output
         print(f"Generated response: {response}")
         return response
-        
+
     except Exception as e:
         print(f"Error in generate_response: {str(e)}")
-        return "I'm sorry, I encountered an error while generating a response."
+        return f"[Runtime Error] {str(e)}"
 
 class ChatRequest(BaseModel):
     messages: List[Dict[str, str]]
