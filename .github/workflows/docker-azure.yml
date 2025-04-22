@@ -23,16 +23,16 @@ jobs:
       - name: Log in to Azure Container Registry 1
         uses: azure/docker-login@v1
         with:
-          login-server: ${{ secrets.ACR1_LOGIN_SERVER }}
-          username: ${{ secrets.ACR1_USERNAME }}
-          password: ${{ secrets.ACR1_PASSWORD }}
+          login-server: ${{ secrets.ACR2_LOGIN_SERVER }}
+          username: ${{ secrets.ACR2_USERNAME }}
+          password: ${{ secrets.ACR2_PASSWORD }}
 
       - name: Log in to Azure Container Registry 2
         uses: azure/docker-login@v1
         with:
-          login-server: ${{ secrets.ACR2_LOGIN_SERVER }}
-          username: ${{ secrets.ACR2_USERNAME }}
-          password: ${{ secrets.ACR2_PASSWORD }}
+          login-server: ${{ secrets.ACR1_LOGIN_SERVER }}
+          username: ${{ secrets.ACR1_USERNAME }}
+          password: ${{ secrets.ACR1_PASSWORD }}
 
       - name: Build and push Docker image to both registries
         uses: docker/build-push-action@v5
