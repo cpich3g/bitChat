@@ -86,7 +86,7 @@ def generate_response(messages: List[Dict[str, str]], max_new_tokens: int = 4096
     if not has_system:
         messages = [{
             "role": "system",
-            "content": "Your role as an assistant involves thoroughly exploring questions through a systematic thinking process before providing the final precise and accurate solutions. This requires engaging in a comprehensive cycle of analysis, summarizing, exploration, reassessment, reflection, backtracing, and iteration to develop well-considered thinking processes. Please structure your response into two main sections: Thought and Solution using the specified format: <think> {Thought section} </think> {Solution section}. In the Thought section, detail your reasoning process in steps. Each step should include detailed considerations such as analysing questions, summarizing relevant findings, brainstorming new ideas, verifying the accuracy of the current steps, refining any errors, and revisiting previous steps. In the Solution section, based on various attempts, explorations, and reflections from the Thought section, systematically present the final solution that you deem correct. The Solution section should be logical, accurate, and concise and detail necessary steps needed to reach the conclusion."
+            "content": "Your role as an assistant involves thoroughly exploring questions through a systematic thinking process before providing the final precise and accurate solutions. This requires engaging in a comprehensive cycle of analysis, summarizing, exploration, reassessment, reflection, backtracing, and iteration to develop well-considered thinking processes. Please structure your response into two main sections: Thought and Solution using the specified format: <think> {Thought section} </think> {Solution section}. In the Thought section, detail your reasoning process in steps. The Solution section should be logical, accurate, and concise and detail necessary steps needed to reach the conclusion."
         }] + messages
 
     # Model or tokenizer failed to load
@@ -140,17 +140,16 @@ def generate_response(messages: List[Dict[str, str]], max_new_tokens: int = 4096
         print("generate_response: model.generate() finished.")
 
         # Decode only newly generated part
-        response_raw = tokenizer.decode(outputs[0][input_ids.shape[1]:], skip_special_tokens=True)
-        print("generate_response: Decoded raw response:", response_raw)
+        response = tokenizer.decode(outputs[0][input_ids.shape[1]:], skip_special_tokens=True)
+        print("generate_response: Decoded raw response:", response)
+        # Reverted: No longer removing the <think> block here
+        # import re
+        # response_processed = re.sub(r"<think>.*?</think>\s*", "", response_raw, flags=re.DOTALL).strip()
         
-        # Remove the <think> block
-        import re
-        response_processed = re.sub(r"<think>.*?</think>\s*", "", response_raw, flags=re.DOTALL).strip()
-        
-        if response_processed.strip() == "<|endoftext|>":
-             print("WARNING: Model outputed only <|endoftext|> EOS token after processing. Raw response was:", response_raw)
-        print(f"Processed response (no think block): {response_processed}")
-        return response_processed
+        if response.strip() == "<|endoftext|>":
+             print("WARNING: Model outputed only <|endoftext|> EOS token. Raw response was:", response)
+        print(f"Generated response: {response}") # Log the original response
+        return response # Return the original response
 
     except Exception as e:
         print(f"Error in generate_response: {str(e)}")
@@ -166,7 +165,7 @@ async def generate_stream(messages: List[Dict[str, str]], max_new_tokens: int = 
     if not has_system:
         messages = [{
             "role": "system",
-            "content": "Your role as an assistant involves thoroughly exploring questions through a systematic thinking process before providing the final precise and accurate solutions. This requires engaging in a comprehensive cycle of analysis, summarizing, exploration, reassessment, reflection, backtracing, and iteration to develop well-considered thinking processes. Please structure your response into two main sections: Thought and Solution using the specified format: <think> {Thought section} </think> {Solution section}. In the Thought section, detail your reasoning process in steps. Each step should include detailed considerations such as analysing questions, summarizing relevant findings, brainstorming new ideas, verifying the accuracy of the current steps, refining any errors, and revisiting previous steps. In the Solution section, based on various attempts, explorations, and reflections from the Thought section, systematically present the final solution that you deem correct. The Solution section should be logical, accurate, and concise and detail necessary steps needed to reach the conclusion."
+            "content": "Your role as an assistant involves thoroughly exploring questions through a systematic thinking process before providing the final precise and accurate solutions. This requires engaging in a comprehensive cycle of analysis, summarizing, exploration, reassessment, reflection, backtracing, and iteration to develop well-considered thinking processes. Please structure your response into two main sections: Thought and Solution using the specified format: <think> {Thought section} </think> {Solution section}. In the Thought section, detail your reasoning process in steps. The Solution section should be logical, accurate, and concise and detail necessary steps needed to reach the conclusion."
         }] + messages
 
     # Model or tokenizer failed to load
@@ -204,15 +203,16 @@ async def generate_stream(messages: List[Dict[str, str]], max_new_tokens: int = 
 
         print(f"Input tensor shape (stream): {input_ids.shape}")
 
-        # Generate with streamer
-        buffered_output = ""
-        in_think_block = True # Assume response starts within <think> as per prompt
+        # Generate with streamer - Reverted buffer logic
+        # buffered_output = ""
+        # in_think_block = True 
 
         # Generate with proper error handling
-        print("Stream: Entering token generation loop...") # Log before loop starts
+        # print("Stream: Entering token generation loop...") # Removed log
         with torch.inference_mode():
+            streamer_output_debug = "" # Add simple debug accumulator
             for i in range(max_new_tokens):
-                print(f"Stream: Starting generation for token {i+1}...") # Log start of iteration
+                # print(f"Stream: Starting generation for token {i+1}...") # Removed log
                 # Generate one token at a time
                 outputs = model.generate(
                     input_ids,
@@ -223,7 +223,7 @@ async def generate_stream(messages: List[Dict[str, str]], max_new_tokens: int = 
                     do_sample=True,
                     pad_token_id=tokenizer.eos_token_id,
                 )
-                print(f"Stream: model.generate completed for token {i+1}") # Log after generate call
+                # print(f"Stream: model.generate completed for token {i+1}") # Removed log
 
                 # Get the newly generated token ID
                 new_token_id = outputs[0][-1].item() # Get the last token ID
@@ -232,56 +232,36 @@ async def generate_stream(messages: List[Dict[str, str]], max_new_tokens: int = 
                 if new_token_id == tokenizer.eos_token_id:
                     break
 
-                # Decode the single token, DO NOT skip special tokens initially for processing
-                token_text = tokenizer.decode([new_token_id], skip_special_tokens=False)
-                print(f"Stream: Raw token decoded: '{token_text}'") # Log raw token
+                # Decode the single token, DO skip special tokens for cleaner output now
+                token_text = tokenizer.decode([new_token_id], skip_special_tokens=True) 
+                # print(f"Stream: Raw token decoded: '{token_text}'") # Removed log
 
                 # Update input_ids for next token generation by appending the new token
                 input_ids = torch.cat([input_ids, outputs[:, -1:]], dim=-1)
                 if attention_mask is not None:
                      attention_mask = torch.cat([attention_mask, attention_mask.new_ones((attention_mask.shape[0], 1))], dim=-1)
                 
-                print(f"Stream: Current state - in_think_block={in_think_block}") # Log state
-                if in_think_block:
-                    buffered_output += token_text
-                    print(f"Stream: Appended to buffer. Buffer size: {len(buffered_output)}") # Log buffer append
-                    # Check if the end tag is now in the buffer
-                    end_tag_index = buffered_output.find("</think>")
-                    if end_tag_index != -1:
-                        print("Stream: Found '</think>' tag in buffer.") # Log tag found
-                        # Found the end tag. Extract content after it.
-                        start_yielding_index = end_tag_index + len("</think>")
-                        content_to_yield = buffered_output[start_yielding_index:].lstrip() # Remove leading space after tag
-                        
-                        # Decode the part to yield again, this time skipping special tokens for cleaner output
-                        # This is tricky as we only have text now. Let's just yield the processed text.
-                        # Re-tokenizing and decoding might be complex here.
-                        # We will rely on the frontend markdown renderer to handle remaining special tokens if any.
-                        
-                        if content_to_yield:
-                             processed_yield = content_to_yield.replace("<0x0A>", "\n")
-                             print(f"Stream: Yielding content after think block: '{processed_yield}'") # Log yield
-                             yield processed_yield
-                        
-                        in_think_block = False
-                        print("Stream: Set in_think_block = False") # Log state change
-                        buffered_output = "" # Clear buffer
-                        print("Stream: Cleared buffer.") # Log buffer clear
-                else:
-                    # Think block is finished, yield subsequent tokens directly
-                    processed_yield = token_text.replace("<0x0A>", "\n")
-                    print(f"Stream: Yielding subsequent token: '{processed_yield}'") # Log subsequent yield
-                    yield processed_yield
+                # Reverted: Removed buffering logic
+                # print(f"Stream: Current state - in_think_block={in_think_block}") 
+                # if in_think_block:
+                #    ... buffer logic ...
+                # else:
+                
+                # Yield the token text directly
+                if token_text: # Avoid yielding empty strings if skip_special_tokens removes everything
+                    streamer_output_debug += token_text # Accumulate for debug
+                    # print(f"Stream: Yielding subsequent token: '{token_text}'") # Removed log
+                    yield token_text
 
                 # Small delay to control stream rate
                 await asyncio.sleep(0.01)
         
-        # If loop finished but still in think block (e.g., model stopped early), yield nothing more.
-        if in_think_block:
-            print("Warning: Stream ended while still processing the <think> block.")
+        # Reverted: Removed end-of-stream check for in_think_block
+        # if in_think_block:
+        #     print("Warning: Stream ended while still processing the <think> block.")
             
-        # Debug output - streamer_output is no longer tracked this way
-        # print(f"Generated streaming response complete: {streamer_output}") 
+        # Debug output of accumulated stream
+        print(f"Generated streaming response complete (debug): {streamer_output_debug}") 
 
     except Exception as e:
         print(f"Error in generate_stream: {str(e)}")

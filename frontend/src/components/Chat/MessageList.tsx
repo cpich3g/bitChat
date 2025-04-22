@@ -35,21 +35,33 @@ const MessageList: React.FC<MessageListProps> = ({ messages, loading, streamingC
     }
   };
   
-  // Process markdown content to fix triple backticks and remove system tags
-  const processMarkdown = (content: string) => {
-    // Remove <think>...</think> blocks
-    let processedContent = content.replace(/<think>.*?<\/think>/gs, '');
-    // Remove <im_start> tags
-    processedContent = processedContent.replace(/<im_start>/g, '');
+  // Helper function to parse content into think and solution parts
+  const parseContent = (content: string): { thinkContent: string | null; solutionContent: string } => {
+    const thinkMatch = content.match(/<think>(.*?)<\/think>\s*(.*)/s); // Use 's' flag for dotall
     
-    // Ensure proper code block formatting with triple backticks
-    return processedContent
-      // Replace consecutive backticks with properly spaced ones if needed
-      .replace(/```(\w+)/g, '``` $1')
-      // Fix any potential double spaces in language identifier
-      .replace(/```\s\s+(\w+)/g, '``` $1');
+    if (thinkMatch && thinkMatch[1]) {
+      // Found think block
+      const thinkContent = thinkMatch[1].trim();
+      const solutionContent = thinkMatch[2] ? thinkMatch[2].trim() : ''; // Content after think block
+      return { thinkContent, solutionContent };
+    } else {
+      // No think block found, treat entire content as solution
+      // Also remove potential leftover <im_start> tags just in case
+      const solutionContent = content.replace(/<im_start>/g, '').trim();
+      return { thinkContent: null, solutionContent };
+    }
   };
-  
+
+  // Process only the solution part for markdown rendering (e.g., backticks)
+  const processSolutionMarkdown = (solutionContent: string) => {
+    // Ensure proper code block formatting with triple backticks
+    return solutionContent
+      // Replace consecutive backticks with properly spaced ones if needed
+      .replace(/``` ?(\w+)/g, '```$1') // Handle optional space after ```
+      // Fix any potential double spaces in language identifier - less likely now
+      .replace(/```\s\s+(\w+)/g, '```$1'); 
+  };
+
   return (
     <div 
       className="chat-messages" 
@@ -59,12 +71,25 @@ const MessageList: React.FC<MessageListProps> = ({ messages, loading, streamingC
       {messages.map((msg, idx) => (
         <div key={idx} className={`message ${msg.role}`}>
           <div className="message-content">
-            {msg.role === 'assistant' ? (
-              <>
-                {/* Removed the <pre> block that was displaying raw content */}
-                <ReactMarkdown
-                  components={
-                    {
+            {msg.role === 'assistant' ? (() => {
+              const { thinkContent, solutionContent } = parseContent(msg.content);
+              return (
+                <>
+                  {thinkContent && (
+                    <details className="thinking-process">
+                      <summary>Thinking Process</summary>
+                      {/* Render think content as preformatted text for now */}
+                      <pre className="think-content">{thinkContent}</pre>
+                      {/* Optionally use ReactMarkdown for think content too:
+                      <ReactMarkdown rehypePlugins={[rehypeRaw]}>
+                        {thinkContent}
+                      </ReactMarkdown> 
+                      */}
+                    </details>
+                  )}
+                  <ReactMarkdown
+                    components={
+                      {
                     // Custom styling for code blocks - Simplified props type
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     code: ({ inline, className, children }: any) => { // Removed unused ...props
@@ -86,8 +111,8 @@ const MessageList: React.FC<MessageListProps> = ({ messages, loading, streamingC
                     // Better table rendering - Simplified props type
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     table: ({ children, ...props }: any) => {
-                      // Filter out potentially problematic props like 'node' - keep restProps here
-                      const { node, ...restProps } = props; // Removed unused 'node' from destructuring
+                      // Filter out potentially problematic props like 'node'
+                      const { node, ...restProps } = props; // Remove 'node' from destructuring
                       return (
                         <div className="table-container">
                           <table {...restProps}>{children}</table>
@@ -96,13 +121,14 @@ const MessageList: React.FC<MessageListProps> = ({ messages, loading, streamingC
                     }
                   } satisfies Components // Use 'satisfies' for better type checking without casting
                 }
-                  rehypePlugins={[rehypeRaw]}
-                >
-                  {processMarkdown(msg.content)}
-                </ReactMarkdown>
-              </>
-            ) : (
-              msg.content
+                    rehypePlugins={[rehypeRaw]}
+                  >
+                    {processSolutionMarkdown(solutionContent)}
+                  </ReactMarkdown>
+                </>
+              );
+            })() : (
+              msg.content // User messages are displayed directly
             )}
           </div>
         </div>
