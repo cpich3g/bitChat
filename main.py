@@ -173,6 +173,7 @@ async def generate_stream(messages: List[Dict[str, str]], max_new_tokens: int = 
     if model is None or tokenizer is None:
         error_msg = "[Startup Error] Model or tokenizer was not loaded at application startup. Check container logs for details (common causes: missing HUGGINGFACE_TOKEN, GPU unavailable, model download error)."
         print(error_msg)
+        print("Stream: Yielding model/tokenizer load error...") # Log before yielding error
         yield error_msg
         return
 
@@ -208,8 +209,10 @@ async def generate_stream(messages: List[Dict[str, str]], max_new_tokens: int = 
         in_think_block = True # Assume response starts within <think> as per prompt
 
         # Generate with proper error handling
+        print("Stream: Entering token generation loop...") # Log before loop starts
         with torch.inference_mode():
             for i in range(max_new_tokens):
+                print(f"Stream: Starting generation for token {i+1}...") # Log start of iteration
                 # Generate one token at a time
                 outputs = model.generate(
                     input_ids,
@@ -220,6 +223,7 @@ async def generate_stream(messages: List[Dict[str, str]], max_new_tokens: int = 
                     do_sample=True,
                     pad_token_id=tokenizer.eos_token_id,
                 )
+                print(f"Stream: model.generate completed for token {i+1}") # Log after generate call
 
                 # Get the newly generated token ID
                 new_token_id = outputs[0][-1].item() # Get the last token ID
@@ -230,17 +234,21 @@ async def generate_stream(messages: List[Dict[str, str]], max_new_tokens: int = 
 
                 # Decode the single token, DO NOT skip special tokens initially for processing
                 token_text = tokenizer.decode([new_token_id], skip_special_tokens=False)
+                print(f"Stream: Raw token decoded: '{token_text}'") # Log raw token
 
                 # Update input_ids for next token generation by appending the new token
                 input_ids = torch.cat([input_ids, outputs[:, -1:]], dim=-1)
                 if attention_mask is not None:
                      attention_mask = torch.cat([attention_mask, attention_mask.new_ones((attention_mask.shape[0], 1))], dim=-1)
-
+                
+                print(f"Stream: Current state - in_think_block={in_think_block}") # Log state
                 if in_think_block:
                     buffered_output += token_text
+                    print(f"Stream: Appended to buffer. Buffer size: {len(buffered_output)}") # Log buffer append
                     # Check if the end tag is now in the buffer
                     end_tag_index = buffered_output.find("</think>")
                     if end_tag_index != -1:
+                        print("Stream: Found '</think>' tag in buffer.") # Log tag found
                         # Found the end tag. Extract content after it.
                         start_yielding_index = end_tag_index + len("</think>")
                         content_to_yield = buffered_output[start_yielding_index:].lstrip() # Remove leading space after tag
@@ -251,16 +259,19 @@ async def generate_stream(messages: List[Dict[str, str]], max_new_tokens: int = 
                         # We will rely on the frontend markdown renderer to handle remaining special tokens if any.
                         
                         if content_to_yield:
-                             # Decode potentially useful special tokens like newline before yielding
-                             # This is an approximation, ideally we'd handle tokens better
-                             yield content_to_yield.replace("<0x0A>", "\n") 
+                             processed_yield = content_to_yield.replace("<0x0A>", "\n")
+                             print(f"Stream: Yielding content after think block: '{processed_yield}'") # Log yield
+                             yield processed_yield
                         
                         in_think_block = False
+                        print("Stream: Set in_think_block = False") # Log state change
                         buffered_output = "" # Clear buffer
+                        print("Stream: Cleared buffer.") # Log buffer clear
                 else:
                     # Think block is finished, yield subsequent tokens directly
-                    # Decode potentially useful special tokens like newline before yielding
-                    yield token_text.replace("<0x0A>", "\n") 
+                    processed_yield = token_text.replace("<0x0A>", "\n")
+                    print(f"Stream: Yielding subsequent token: '{processed_yield}'") # Log subsequent yield
+                    yield processed_yield
 
                 # Small delay to control stream rate
                 await asyncio.sleep(0.01)
