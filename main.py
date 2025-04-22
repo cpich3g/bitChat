@@ -109,8 +109,17 @@ def generate_response(messages: List[Dict[str, str]], max_new_tokens: int = 4096
             elif m["role"] == "user":
                 user_msg = m["content"]
 
-        prompt = f"{sys_msg}\n\nUser: {user_msg}\nAssistant:"
-        print("Manual prompt for model:", prompt)
+        # Phi-4 and similar models require a chat template with special tokens.
+        prompt = (
+            "<|im_start|>system\n"
+            f"{sys_msg.strip()}\n"
+            "<|im_end|>\n"
+            "<|im_start|>user\n"
+            f"{user_msg.strip()}\n"
+            "<|im_end|>\n"
+            "<|im_start|>assistant\n"
+        )
+        print("Manual prompt for PHI model:", prompt)
 
         enc = tokenizer(prompt, return_tensors="pt")
         input_ids = enc.input_ids.to(device)
