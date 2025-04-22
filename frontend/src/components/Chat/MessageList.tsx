@@ -1,7 +1,8 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Message } from './types';
-import ReactMarkdown from 'react-markdown';
+import ReactMarkdown, { Components } from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
+// Removed incorrect imports
 
 interface MessageListProps {
   messages: Message[];
@@ -34,10 +35,15 @@ const MessageList: React.FC<MessageListProps> = ({ messages, loading, streamingC
     }
   };
   
-  // Process markdown content to fix triple backticks
+  // Process markdown content to fix triple backticks and remove system tags
   const processMarkdown = (content: string) => {
+    // Remove <think>...</think> blocks
+    let processedContent = content.replace(/<think>.*?<\/think>/gs, '');
+    // Remove <im_start> tags
+    processedContent = processedContent.replace(/<im_start>/g, '');
+    
     // Ensure proper code block formatting with triple backticks
-    return content
+    return processedContent
       // Replace consecutive backticks with properly spaced ones if needed
       .replace(/```(\w+)/g, '``` $1')
       // Fix any potential double spaces in language identifier
@@ -55,39 +61,41 @@ const MessageList: React.FC<MessageListProps> = ({ messages, loading, streamingC
           <div className="message-content">
             {msg.role === 'assistant' ? (
               <>
-                <pre style={{ background: "#f5f5f5", color: "#333", border: "1px solid #ddd", padding: 10, borderRadius: 4, marginBottom: 8, overflowX: "auto", fontSize: 14 }}>
-                  {msg.content}
-                </pre>
+                {/* Removed the <pre> block that was displaying raw content */}
                 <ReactMarkdown
-                  components={{
-                    think: ({ children }: { children: React.ReactNode }) => (
-                      <span className="thinking">{children}</span>
-                    ),
-                    // Custom styling for code blocks
-                    code: (props: any) => {
-                      const { className, children, inline, ...rest } = props;
+                  components={
+                    {
+                    // Custom styling for code blocks - Simplified props type
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    code: ({ inline, className, children }: any) => { // Removed unused ...props
                       const match = /language-(\w+)/.exec(className || '');
+                      // Removed unused variables: const { node, ...restProps } = props;
                       if (inline) {
-                        return <code className={className} {...rest}>{children}</code>;
+                        // Pass only className for inline code
+                        return <code className={className}>{String(children).replace(/\n$/, '')}</code>;
                       }
+                      // Pass only className to the inner code block
                       return (
-                        <pre>
-                          <code className={match ? `language-${match[1]}` : ''} {...rest}>
-                            {children}
+                        <pre> {/* Avoid spreading potentially incompatible props */}
+                          <code className={match ? `language-${match[1]}` : className}>
+                            {String(children).replace(/\n$/, '')}
                           </code>
                         </pre>
                       );
                     },
-                    // Better table rendering
-                    table: (props: any) => {
-                      const { children, ...rest } = props;
+                    // Better table rendering - Simplified props type
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    table: ({ children, ...props }: any) => {
+                      // Filter out potentially problematic props like 'node' - keep restProps here
+                      const { node, ...restProps } = props; // Removed unused 'node' from destructuring
                       return (
                         <div className="table-container">
-                          <table {...rest}>{children}</table>
+                          <table {...restProps}>{children}</table>
                         </div>
                       );
                     }
-                  } as any}
+                  } satisfies Components // Use 'satisfies' for better type checking without casting
+                }
                   rehypePlugins={[rehypeRaw]}
                 >
                   {processMarkdown(msg.content)}
