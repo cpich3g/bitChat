@@ -99,27 +99,29 @@ def generate_response(messages: List[Dict[str, str]], max_new_tokens: int = 4096
         # First tokenize without moving to device
         print("generate_response: Model name:", getattr(model, 'name_or_path', 'N/A'))
         print("generate_response: Tokenizer name:", getattr(tokenizer, 'name_or_path', 'N/A'))
-        print("generate_response: Beginning tokenization using chat template.")
-        inputs = tokenizer.apply_chat_template(
-            messages,
-            tokenize=True,
-            add_generation_prompt=True,
-            return_tensors="pt"
-        )
-        print("generate_response: Finished tokenization. Prompt tensor:")
-        print(inputs)
-        print("Prompt decoded: ", tokenizer.decode(inputs[0]))
 
-        # Move tensors to device separately
-        print(f"generate_response: Moving input tensors to device {device}.")
-        input_ids = inputs.to(device)
-        print(f"generate_response: input_ids.shape = {input_ids.shape}")
+        # Manual prompt construction (no chat template)
+        sys_msg = ""
+        user_msg = ""
+        for m in messages:
+            if m["role"] == "system":
+                sys_msg = m["content"]
+            elif m["role"] == "user":
+                user_msg = m["content"]
 
-        # Generate with proper error handling
-        print("generate_response: About to generate response with model.")
+        prompt = f"{sys_msg}\n\nUser: {user_msg}\nAssistant:"
+        print("Manual prompt for model:", prompt)
+
+        enc = tokenizer(prompt, return_tensors="pt")
+        input_ids = enc.input_ids.to(device)
+        attention_mask = enc.attention_mask.to(device) if hasattr(enc, "attention_mask") else None
+
+        print(f"Input tensor shape: {input_ids.shape}")
+
         with torch.inference_mode():
             outputs = model.generate(
                 input_ids,
+                attention_mask=attention_mask,
                 max_new_tokens=max_new_tokens,
                 temperature=0.8,
                 top_p=0.95,
@@ -128,13 +130,11 @@ def generate_response(messages: List[Dict[str, str]], max_new_tokens: int = 4096
             )
         print("generate_response: model.generate() finished.")
 
-        # Get only the newly generated tokens
+        # Decode only newly generated part
         response = tokenizer.decode(outputs[0][input_ids.shape[1]:], skip_special_tokens=True)
-        print("generate_response: Decoded response from model output.")
+        print("generate_response: Decoded raw response:", response)
         if response.strip() == "<|endoftext|>":
-            print("WARNING: Model outputed only <|endoftext|> EOS token. Likely an issue with the prompt format or stopping too early.")
-            print("Prompt sent to model (decoded):")
-            print(tokenizer.decode(inputs[0]))
+            print("WARNING: Model outputed only <|endoftext|> EOS token. Prompt sent was:", prompt)
         print(f"Generated response: {response}")
         return response
 
