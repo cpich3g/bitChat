@@ -28,23 +28,36 @@ def serve_root():
     return FileResponse(index_path)
 
 model_id = "microsoft/phi-4-reasoning"
-device = torch.device("cuda")
-model = AutoModelForCausalLM.from_pretrained(
-    model_id,
-    torch_dtype="auto",
-    device_map="auto",
-    trust_remote_code=True,
-    token=os.getenv("HUGGINGFACE_TOKEN"),
-)
-model.eval()
-tokenizer = AutoTokenizer.from_pretrained(model_id, token=os.getenv("HUGGINGFACE_TOKEN"))
+model = None
+tokenizer = None
+device = None
 
-
-# Optional: torch.compile for even faster inference (PyTorch 2.x+)
 try:
-    model = torch.compile(model)
-except Exception:
-    pass
+    device = torch.device("cuda")
+    token = os.getenv("HUGGINGFACE_TOKEN")
+    if token is None:
+        raise RuntimeError("HUGGINGFACE_TOKEN environment variable is not set. Model loading will fail.")
+
+    model = AutoModelForCausalLM.from_pretrained(
+        model_id,
+        torch_dtype="auto",
+        device_map="auto",
+        trust_remote_code=True,
+        token=token,
+    )
+    model.eval()
+    tokenizer = AutoTokenizer.from_pretrained(model_id, token=token)
+
+    # Optional: torch.compile for even faster inference (PyTorch 2.x+)
+    try:
+        model = torch.compile(model)
+    except Exception:
+        pass
+    print("Model and tokenizer loaded successfully.")
+
+except Exception as e:
+    print(f"Error loading model/tokenizer: {e}")
+
 
 def generate_response(messages: List[Dict[str, str]], max_new_tokens: int = 500) -> str:
     # Create a system message if one doesn't exist
