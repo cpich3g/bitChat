@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       IMAGE_NAME: bitchat
-      DOCKERFILE_PATH: Dockerfile.shared
+      DOCKERFILE_PATH: Dockerfile
       CONTEXT: .
     steps:
       - name: Checkout code
