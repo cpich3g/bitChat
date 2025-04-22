@@ -33,6 +33,8 @@ tokenizer = AutoTokenizer.from_pretrained(model_id)
 model = AutoModelForCausalLM.from_pretrained(
     model_id,
     torch_dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32,
+    trust_remote_code=True,
+    use_auth_token=os.getenv("HUGGINGFACE_TOKEN"),
 ).to(device)
 model.eval()
 
