@@ -5,7 +5,7 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import StreamingResponse
 import os
 import asyncio
 
@@ -19,13 +19,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
-app.mount("/assets", StaticFiles(directory="static/assets"), name="assets")
-
-@app.get("/")
-def serve_root():
-    index_path = os.path.join("static", "index.html")
-    return FileResponse(index_path)
+# Serve front-end static files as SPA
+app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 model_id = "microsoft/bitnet-b1.58-2B-4T"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

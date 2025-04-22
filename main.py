@@ -31,12 +31,13 @@ model_id = "microsoft/phi-4-reasoning"
 device = torch.device("cuda")
 model = AutoModelForCausalLM.from_pretrained(
     model_id,
-    torch_dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32,
+    torch_dtype="auto",
+    device_map="auto",
     trust_remote_code=True,
     token=os.getenv("HUGGINGFACE_TOKEN"),
-).to(device)
+)
 model.eval()
-tokenizer = AutoTokenizer.from_pretrained(model_id)
+tokenizer = AutoTokenizer.from_pretrained(model_id, token=os.getenv("HUGGINGFACE_TOKEN"))
 
 
 # Optional: torch.compile for even faster inference (PyTorch 2.x+)
