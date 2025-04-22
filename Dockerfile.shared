@@ -2,9 +2,10 @@
 #FROM node:20-alpine AS frontend-build
 FROM node:current AS frontend-build
 WORKDIR /app/frontend
-# Copy manifest files directly into WORKDIR
-COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci
+# Copy manifest files into WORKDIR
+COPY frontend/package.json ./
+# Install dependencies (no lockfile available)
+RUN npm install
 # Copy all frontend source into WORKDIR
 COPY frontend/ ./
 RUN npm run build
