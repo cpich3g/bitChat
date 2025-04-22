@@ -56,34 +56,30 @@ const MessageList: React.FC<MessageListProps> = ({ messages, loading, streamingC
             {msg.role === 'assistant' ? (
               <ReactMarkdown
                 components={{
-                  // Custom renderer for thinking tokens
                   think: ({ children }: { children: React.ReactNode }) => (
                     <span className="thinking">{children}</span>
                   ),
                   // Custom styling for code blocks
-                  code({ node, className, children, ...props }) {
+                  code: (props: any) => {
+                    const { className, children, inline, ...rest } = props;
                     const match = /language-(\w+)/.exec(className || '');
-                    // Remove the 'inline' reference and use props.inline if needed
-                    if ((props as any).inline) {
-                      return (
-                        <code className={className} {...props}>
-                          {children}
-                        </code>
-                      );
+                    if (inline) {
+                      return <code className={className} {...rest}>{children}</code>;
                     }
                     return (
                       <pre>
-                        <code className={match ? `language-${match[1]}` : ''} {...props}>
+                        <code className={match ? `language-${match[1]}` : ''} {...rest}>
                           {children}
                         </code>
                       </pre>
                     );
                   },
                   // Better table rendering
-                  table({ node, children, ...props }) {
+                  table: (props: any) => {
+                    const { children, ...rest } = props;
                     return (
                       <div className="table-container">
-                        <table {...props}>{children}</table>
+                        <table {...rest}>{children}</table>
                       </div>
                     );
                   }
