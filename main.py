@@ -63,7 +63,6 @@ try:
         model_id,
         torch_dtype="auto",
         device_map="auto",
-        trust_remote_code=True,
         token=token,
     )
     model.eval()
@@ -80,7 +79,7 @@ except Exception as e:
     print(f"Error loading model/tokenizer: {e}")
 
 
-def generate_response(messages: List[Dict[str, str]], max_new_tokens: int = 32000) -> str:
+def generate_response(messages: List[Dict[str, str]], max_new_tokens: int = 4096) -> str:
     # Create a system message if one doesn't exist
     has_system = any(msg["role"] == "system" for msg in messages)
     if not has_system:
@@ -159,9 +158,9 @@ def generate_response(messages: List[Dict[str, str]], max_new_tokens: int = 3200
 
 class ChatRequest(BaseModel):
     messages: List[Dict[str, str]]
-    max_new_tokens: int = 8000
+    max_new_tokens: int = 4096
 
-async def generate_stream(messages: List[Dict[str, str]], max_new_tokens: int = 8000) -> AsyncIterable[str]:
+async def generate_stream(messages: List[Dict[str, str]], max_new_tokens: int = 4096) -> AsyncIterable[str]:
     # Create a system message if one doesn't exist
     has_system = any(msg["role"] == "system" for msg in messages)
     if not has_system:
@@ -198,7 +197,7 @@ async def generate_stream(messages: List[Dict[str, str]], max_new_tokens: int = 
                 # Generate one token at a time
                 outputs = model.generate(
                     input_ids,
-                    max_new_tokens=8000,
+                    max_new_tokens=4096,
                     temperature=0.8,
                     top_p=0.95,
                     do_sample=True,
