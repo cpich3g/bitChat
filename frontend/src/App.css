@@ -705,3 +705,13 @@ body {
     transform: scale(1.2);
   }
 }
+
+/* Style for thinking tokens rendered from <think> tags */
+.thinking {
+  display: block;
+  font-style: italic;
+  color: #555;
+  margin: 12px 0;
+  padding-left: 12px;
+  border-left: 3px solid #ccc;
+}

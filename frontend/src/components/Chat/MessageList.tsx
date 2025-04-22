@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Message } from './types';
 import ReactMarkdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
 
 interface MessageListProps {
   messages: Message[];
@@ -55,6 +56,10 @@ const MessageList: React.FC<MessageListProps> = ({ messages, loading, streamingC
             {msg.role === 'assistant' ? (
               <ReactMarkdown
                 components={{
+                  // Custom renderer for thinking tokens
+                  think({ node, children, ...props }) {
+                    return <span className="thinking">{children}</span>;
+                  },
                   // Custom styling for code blocks
                   code({ node, className, children, ...props }) {
                     const match = /language-(\w+)/.exec(className || '');
@@ -83,6 +88,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, loading, streamingC
                     );
                   }
                 }}
+                rehypePlugins={[rehypeRaw]}
               >
                 {processMarkdown(msg.content)}
               </ReactMarkdown>
