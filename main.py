@@ -80,13 +80,13 @@ except Exception as e:
     print(f"Error loading model/tokenizer: {e}")
 
 
-def generate_response(messages: List[Dict[str, str]], max_new_tokens: int = 500) -> str:
+def generate_response(messages: List[Dict[str, str]], max_new_tokens: int = 32000) -> str:
     # Create a system message if one doesn't exist
     has_system = any(msg["role"] == "system" for msg in messages)
     if not has_system:
         messages = [{
             "role": "system",
-            "content": "Your role as an assistant involves thoroughly exploring questions through a systematic thinking process before providing the final precise and accurate solutions. This requires engaging in a comprehensive cycle of analysis, summarizing, exploration, reassessment, reflection, backtracing, and iteration to develop well-considered thinking processes. Please structure your response into two main sections: Thought and Solution using the specified format: <think> {Thought section} </think> {Solution section}. In the Thought section, detail your reasoning process in steps. Each step should include detailed considerations such as analysing questions, summarizing relevant findings, brainstorming new ideas, verifying the accuracy of the current steps, refining any errors, and revisiting previous steps. In the Solution section, based on various attempts, explorations, and reflections from the Thought section, systematically present the final solution that you deem correct. The Solution section should be logical, accurate, and concise and detail necessary steps needed to reach the conclusion. Now, try to solve the following question through the above guidelines."
+            "content": "Your role as an assistant involves thoroughly exploring questions through a systematic thinking process before providing the final precise and accurate solutions. This requires engaging in a comprehensive cycle of analysis, summarizing, exploration, reassessment, reflection, backtracing, and iteration to develop well-considered thinking processes. Please structure your response into two main sections: Thought and Solution using the specified format: <think> {Thought section} </think> {Solution section}. In the Thought section, detail your reasoning process in steps. Each step should include detailed considerations such as analysing questions, summarizing relevant findings, brainstorming new ideas, verifying the accuracy of the current steps, refining any errors, and revisiting previous steps. In the Solution section, based on various attempts, explorations, and reflections from the Thought section, systematically present the final solution that you deem correct. The Solution section should be logical, accurate, and concise and detail necessary steps needed to reach the conclusion."
         }] + messages
 
     # Model or tokenizer failed to load
@@ -121,6 +121,10 @@ def generate_response(messages: List[Dict[str, str]], max_new_tokens: int = 500)
         # Get only the newly generated tokens
         response = tokenizer.decode(outputs[0][input_ids.shape[1]:], skip_special_tokens=True)
 
+        # Always ensure <think>...</think> separation
+        if "<think>" not in response and "</think>" not in response:
+            response = f"<think>\n[Internal reasoning omitted]\n</think>\n{response}"
+
         # Debug output
         print(f"Generated response: {response}")
         return response
@@ -139,7 +143,7 @@ async def generate_stream(messages: List[Dict[str, str]], max_new_tokens: int = 
     if not has_system:
         messages = [{
             "role": "system",
-            "content": "Your role as an assistant involves thoroughly exploring questions through a systematic thinking process before providing the final precise and accurate solutions. This requires engaging in a comprehensive cycle of analysis, summarizing, exploration, reassessment, reflection, backtracing, and iteration to develop well-considered thinking processes. Please structure your response into two main sections: Thought and Solution using the specified format: <think> {Thought section} </think> {Solution section}. In the Thought section, detail your reasoning process in steps. Each step should include detailed considerations such as analysing questions, summarizing relevant findings, brainstorming new ideas, verifying the accuracy of the current steps, refining any errors, and revisiting previous steps. In the Solution section, based on various attempts, explorations, and reflections from the Thought section, systematically present the final solution that you deem correct. The Solution section should be logical, accurate, and concise and detail necessary steps needed to reach the conclusion. Now, try to solve the following question through the above guidelines."
+            "content": "Your role as an assistant involves thoroughly exploring questions through a systematic thinking process before providing the final precise and accurate solutions. This requires engaging in a comprehensive cycle of analysis, summarizing, exploration, reassessment, reflection, backtracing, and iteration to develop well-considered thinking processes. Please structure your response into two main sections: Thought and Solution using the specified format: <think> {Thought section} </think> {Solution section}. In the Thought section, detail your reasoning process in steps. Each step should include detailed considerations such as analysing questions, summarizing relevant findings, brainstorming new ideas, verifying the accuracy of the current steps, refining any errors, and revisiting previous steps. In the Solution section, based on various attempts, explorations, and reflections from the Thought section, systematically present the final solution that you deem correct. The Solution section should be logical, accurate, and concise and detail necessary steps needed to reach the conclusion."
         }] + messages
 
     # Model or tokenizer failed to load
@@ -170,7 +174,7 @@ async def generate_stream(messages: List[Dict[str, str]], max_new_tokens: int = 
                 # Generate one token at a time
                 outputs = model.generate(
                     input_ids,
-                    max_new_tokens=1,
+                    max_new_tokens=32000,
                     temperature=0.8,
                     top_p=0.95,
                     do_sample=True,
