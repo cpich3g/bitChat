@@ -54,40 +54,45 @@ const MessageList: React.FC<MessageListProps> = ({ messages, loading, streamingC
         <div key={idx} className={`message ${msg.role}`}>
           <div className="message-content">
             {msg.role === 'assistant' ? (
-              <ReactMarkdown
-                components={{
-                  think: ({ children }: { children: React.ReactNode }) => (
-                    <span className="thinking">{children}</span>
-                  ),
-                  // Custom styling for code blocks
-                  code: (props: any) => {
-                    const { className, children, inline, ...rest } = props;
-                    const match = /language-(\w+)/.exec(className || '');
-                    if (inline) {
-                      return <code className={className} {...rest}>{children}</code>;
+              <>
+                <pre style={{ background: "#f5f5f5", color: "#333", border: "1px solid #ddd", padding: 10, borderRadius: 4, marginBottom: 8, overflowX: "auto", fontSize: 14 }}>
+                  {msg.content}
+                </pre>
+                <ReactMarkdown
+                  components={{
+                    think: ({ children }: { children: React.ReactNode }) => (
+                      <span className="thinking">{children}</span>
+                    ),
+                    // Custom styling for code blocks
+                    code: (props: any) => {
+                      const { className, children, inline, ...rest } = props;
+                      const match = /language-(\w+)/.exec(className || '');
+                      if (inline) {
+                        return <code className={className} {...rest}>{children}</code>;
+                      }
+                      return (
+                        <pre>
+                          <code className={match ? `language-${match[1]}` : ''} {...rest}>
+                            {children}
+                          </code>
+                        </pre>
+                      );
+                    },
+                    // Better table rendering
+                    table: (props: any) => {
+                      const { children, ...rest } = props;
+                      return (
+                        <div className="table-container">
+                          <table {...rest}>{children}</table>
+                        </div>
+                      );
                     }
-                    return (
-                      <pre>
-                        <code className={match ? `language-${match[1]}` : ''} {...rest}>
-                          {children}
-                        </code>
-                      </pre>
-                    );
-                  },
-                  // Better table rendering
-                  table: (props: any) => {
-                    const { children, ...rest } = props;
-                    return (
-                      <div className="table-container">
-                        <table {...rest}>{children}</table>
-                      </div>
-                    );
-                  }
-                } as any}
-                rehypePlugins={[rehypeRaw]}
-              >
-                {processMarkdown(msg.content)}
-              </ReactMarkdown>
+                  } as any}
+                  rehypePlugins={[rehypeRaw]}
+                >
+                  {processMarkdown(msg.content)}
+                </ReactMarkdown>
+              </>
             ) : (
               msg.content
             )}
