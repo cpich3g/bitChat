@@ -33,6 +33,13 @@ tokenizer = None
 device = None
 
 try:
+    print(f"torch.cuda.is_available(): {torch.cuda.is_available()}")
+    print(f"torch.cuda.device_count(): {torch.cuda.device_count()}")
+    if torch.cuda.is_available():
+        print(f"torch.cuda.get_device_name(0): {torch.cuda.get_device_name(0)}")
+    else:
+        print("CUDA is not available! Model load will fail if CUDA is required.")
+
     device = torch.device("cuda")
     token = os.getenv("HUGGINGFACE_TOKEN")
     if token is None:

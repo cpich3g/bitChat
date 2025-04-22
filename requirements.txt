@@ -3,4 +3,5 @@ torch
 uvicorn
 huggingface-hub
 transformers
+accelerate
 # git+https://github.com/shumingma/transformers.git
