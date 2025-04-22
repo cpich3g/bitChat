@@ -63,6 +63,7 @@ try:
         model_id,
         torch_dtype="auto",
         device_map="auto",
+        trust_remote_code=True,
         token=token,
     )
     model.eval()
