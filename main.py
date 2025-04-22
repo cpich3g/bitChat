@@ -32,13 +32,27 @@ model = None
 tokenizer = None
 device = None
 
+import subprocess
+
 try:
+    print("=== PACKAGE DIAGNOSTICS START ===")
+    try:
+        import accelerate
+        print("accelerate is importable!")
+    except ImportError:
+        print("accelerate is NOT importable!")
+
+    print("--- pip list output ---")
+    pip_list = subprocess.run(["pip", "list"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding="utf-8")
+    print(pip_list.stdout)
+    print("--- END pip list output ---")
     print(f"torch.cuda.is_available(): {torch.cuda.is_available()}")
     print(f"torch.cuda.device_count(): {torch.cuda.device_count()}")
     if torch.cuda.is_available():
         print(f"torch.cuda.get_device_name(0): {torch.cuda.get_device_name(0)}")
     else:
         print("CUDA is not available! Model load will fail if CUDA is required.")
+    print("=== PACKAGE DIAGNOSTICS END ===")
 
     device = torch.device("cuda")
     token = os.getenv("HUGGINGFACE_TOKEN")
