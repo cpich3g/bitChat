@@ -212,7 +212,7 @@ async def generate_stream(messages: List[Dict[str, str]], max_new_tokens: int = 
                     break
 
                 # Decode the single token
-                token_text = tokenizer.decode(new_token, skip_special_tokens=True)
+                token_text = tokenizer.decode(new_token)
                 streamer_output += token_text
 
                 # Update input_ids for next token generation
