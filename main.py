@@ -97,17 +97,22 @@ def generate_response(messages: List[Dict[str, str]], max_new_tokens: int = 3200
 
     try:
         # First tokenize without moving to device
+        print("generate_response: Beginning tokenization using chat template.")
         inputs = tokenizer.apply_chat_template(
             messages,
             tokenize=True,
             add_generation_prompt=True,
             return_tensors="pt"
         )
+        print("generate_response: Finished tokenization.")
 
         # Move tensors to device separately
+        print(f"generate_response: Moving input tensors to device {device}.")
         input_ids = inputs.to(device)
+        print(f"generate_response: input_ids.shape = {input_ids.shape}")
 
         # Generate with proper error handling
+        print("generate_response: About to generate response with model.")
         with torch.inference_mode():
             outputs = model.generate(
                 input_ids,
@@ -117,9 +122,11 @@ def generate_response(messages: List[Dict[str, str]], max_new_tokens: int = 3200
                 do_sample=True,
                 pad_token_id=tokenizer.eos_token_id,
             )
+        print("generate_response: model.generate() finished.")
 
         # Get only the newly generated tokens
         response = tokenizer.decode(outputs[0][input_ids.shape[1]:], skip_special_tokens=True)
+        print("generate_response: Decoded response from model output.")
 
         # Always ensure <think>...</think> and <final>...</final> separation
         user_message = messages[-1]['content'] if messages and 'content' in messages[-1] else ""
