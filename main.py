@@ -172,16 +172,31 @@ async def generate_stream(messages: List[Dict[str, str]], max_new_tokens: int = 
         return
 
     try:
-        # First tokenize without moving to device
-        inputs = tokenizer.apply_chat_template(
-            messages,
-            tokenize=True,
-            add_generation_prompt=True,
-            return_tensors="pt"
-        )
+        # Manual prompt construction for Phi-4 format
+        sys_msg = ""
+        user_msg = ""
+        for m in messages:
+            if m["role"] == "system":
+                sys_msg = m["content"]
+            elif m["role"] == "user":
+                user_msg = m["content"]
 
-        # Move tensors to device separately
-        input_ids = inputs.to(device)
+        prompt = (
+            "<|im_start|>system\n"
+            f"{sys_msg.strip()}\n"
+            "<|im_end|>\n"
+            "<|im_start|>user\n"
+            f"{user_msg.strip()}\n"
+            "<|im_end|>\n"
+            "<|im_start|>assistant\n"
+        )
+        print("Manual prompt for PHI model (stream):", prompt)
+
+        enc = tokenizer(prompt, return_tensors="pt")
+        input_ids = enc.input_ids.to(device)
+        attention_mask = enc.attention_mask.to(device) if hasattr(enc, "attention_mask") else None
+
+        print(f"Input tensor shape (stream): {input_ids.shape}")
 
         # Generate with streamer
         streamer_output = ""
@@ -192,26 +207,30 @@ async def generate_stream(messages: List[Dict[str, str]], max_new_tokens: int = 
                 # Generate one token at a time
                 outputs = model.generate(
                     input_ids,
-                    max_new_tokens=4096,
+                    attention_mask=attention_mask,
+                    max_new_tokens=1, # Generate one token at a time for streaming
                     temperature=0.8,
                     top_p=0.95,
                     do_sample=True,
                     pad_token_id=tokenizer.eos_token_id,
                 )
 
-                # Get the newly generated token
-                new_token = outputs[0][input_ids.shape[1]:][0]
+                # Get the newly generated token ID
+                new_token_id = outputs[0][-1].item() # Get the last token ID
 
                 # If we hit the end token, stop
-                if new_token.item() == tokenizer.eos_token_id:
+                if new_token_id == tokenizer.eos_token_id:
                     break
 
-                # Decode the single token
-                token_text = tokenizer.decode(new_token)
+                # Decode the single token, DO NOT skip special tokens for debugging
+                token_text = tokenizer.decode([new_token_id], skip_special_tokens=False)
                 streamer_output += token_text
 
-                # Update input_ids for next token generation
-                input_ids = outputs
+                # Update input_ids for next token generation by appending the new token
+                input_ids = torch.cat([input_ids, outputs[:, -1:]], dim=-1)
+                if attention_mask is not None:
+                     attention_mask = torch.cat([attention_mask, attention_mask.new_ones((attention_mask.shape[0], 1))], dim=-1)
+
 
                 # Yield the token text directly, no SSE formatting
                 yield token_text
