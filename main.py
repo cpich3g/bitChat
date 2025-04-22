@@ -97,6 +97,8 @@ def generate_response(messages: List[Dict[str, str]], max_new_tokens: int = 4096
 
     try:
         # First tokenize without moving to device
+        print("generate_response: Model name:", getattr(model, 'name_or_path', 'N/A'))
+        print("generate_response: Tokenizer name:", getattr(tokenizer, 'name_or_path', 'N/A'))
         print("generate_response: Beginning tokenization using chat template.")
         inputs = tokenizer.apply_chat_template(
             messages,
@@ -104,7 +106,9 @@ def generate_response(messages: List[Dict[str, str]], max_new_tokens: int = 4096
             add_generation_prompt=True,
             return_tensors="pt"
         )
-        print("generate_response: Finished tokenization.")
+        print("generate_response: Finished tokenization. Prompt tensor:")
+        print(inputs)
+        print("Prompt decoded: ", tokenizer.decode(inputs[0]))
 
         # Move tensors to device separately
         print(f"generate_response: Moving input tensors to device {device}.")
@@ -127,8 +131,10 @@ def generate_response(messages: List[Dict[str, str]], max_new_tokens: int = 4096
         # Get only the newly generated tokens
         response = tokenizer.decode(outputs[0][input_ids.shape[1]:], skip_special_tokens=True)
         print("generate_response: Decoded response from model output.")
-
-        # Do not wrap or edit model output; return raw output as-is including <think> tags etc.
+        if response.strip() == "<|endoftext|>":
+            print("WARNING: Model outputed only <|endoftext|> EOS token. Likely an issue with the prompt format or stopping too early.")
+            print("Prompt sent to model (decoded):")
+            print(tokenizer.decode(inputs[0]))
         print(f"Generated response: {response}")
         return response
 
