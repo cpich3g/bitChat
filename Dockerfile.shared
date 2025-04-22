@@ -31,6 +31,7 @@ COPY . .
 COPY --from=frontend-build /app/frontend/dist /app/static
  
 ENV PYTHONUNBUFFERED=1 PORT=8000
-ENV TORCHINDUCTOR_DISABLE=1
-EXPOSE 8000
-CMD ["uvicorn", "main_reasoner:app", "--host", "0.0.0.0", "--port", "8000"]
+# Expose the dynamic port expected by Azure Container Apps
+EXPOSE ${PORT}
+# Use shell form so $PORT is substituted at runtime
+CMD uvicorn main:app --host 0.0.0.0 --port $PORT

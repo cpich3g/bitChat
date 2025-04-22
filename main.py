@@ -27,14 +27,17 @@ def serve_root():
     index_path = os.path.join("static", "index.html")
     return FileResponse(index_path)
 
-model_id = "microsoft/bitnet-b1.58-2B-4T"
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-tokenizer = AutoTokenizer.from_pretrained(model_id)
+model_id = "microsoft/phi-4-reasoning"
+device = torch.device("cuda")
 model = AutoModelForCausalLM.from_pretrained(
     model_id,
     torch_dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32,
+    trust_remote_code=True,
+    token=os.getenv("HUGGINGFACE_TOKEN"),
 ).to(device)
 model.eval()
+tokenizer = AutoTokenizer.from_pretrained(model_id)
+
 
 # Optional: torch.compile for even faster inference (PyTorch 2.x+)
 try:
@@ -46,7 +49,7 @@ def generate_response(messages: List[Dict[str, str]], max_new_tokens: int = 500)
     # Create a system message if one doesn't exist
     has_system = any(msg["role"] == "system" for msg in messages)
     if not has_system:
-        messages = [{"role": "system", "content": "You are a helpful AI assistant."}] + messages
+        messages = [{"role": "system", "content": "Your role as an assistant involves thoroughly exploring questions through a systematic thinking process before providing the final precise and accurate solutions. This requires engaging in a comprehensive cycle of analysis, summarizing, exploration, reassessment, reflection, backtracing, and iteration to develop well-considered thinking processes. Please structure your response into two main sections: Thought and Solution using the specified format: <think> {Thought section} </think> {Solution section}. In the Thought section, detail your reasoning process in steps. Each step should include detailed considerations such as analysing questions, summarizing relevant findings, brainstorming new ideas, verifying the accuracy of the current steps, refining any errors, and revisiting previous steps. In the Solution section, based on various attempts, explorations, and reflections from the Thought section, systematically present the final solution that you deem correct. The Solution section should be logical, accurate, and concise and detail necessary steps needed to reach the conclusion. Now, try to solve the following question through the above guidelines."}] + messages
     
     try:
         # First tokenize without moving to device
@@ -65,7 +68,7 @@ def generate_response(messages: List[Dict[str, str]], max_new_tokens: int = 500)
             outputs = model.generate(
                 input_ids,
                 max_new_tokens=max_new_tokens,
-                temperature=0.7,
+                temperature=0.8,
                 top_p=0.95,
                 do_sample=True,
                 pad_token_id=tokenizer.eos_token_id,
@@ -84,13 +87,13 @@ def generate_response(messages: List[Dict[str, str]], max_new_tokens: int = 500)
 
 class ChatRequest(BaseModel):
     messages: List[Dict[str, str]]
-    max_new_tokens: int = 500
+    max_new_tokens: int = 32000
 
-async def generate_stream(messages: List[Dict[str, str]], max_new_tokens: int = 500) -> AsyncIterable[str]:
+async def generate_stream(messages: List[Dict[str, str]], max_new_tokens: int = 32000) -> AsyncIterable[str]:
     # Create a system message if one doesn't exist
     has_system = any(msg["role"] == "system" for msg in messages)
     if not has_system:
-        messages = [{"role": "system", "content": "You are a helpful AI assistant."}] + messages
+        messages = [{"role": "system", "content": "Your role as an assistant involves thoroughly exploring questions through a systematic thinking process before providing the final precise and accurate solutions. This requires engaging in a comprehensive cycle of analysis, summarizing, exploration, reassessment, reflection, backtracing, and iteration to develop well-considered thinking processes. Please structure your response into two main sections: Thought and Solution using the specified format: <think> {Thought section} </think> {Solution section}. In the Thought section, detail your reasoning process in steps. Each step should include detailed considerations such as analysing questions, summarizing relevant findings, brainstorming new ideas, verifying the accuracy of the current steps, refining any errors, and revisiting previous steps. In the Solution section, based on various attempts, explorations, and reflections from the Thought section, systematically present the final solution that you deem correct. The Solution section should be logical, accurate, and concise and detail necessary steps needed to reach the conclusion. Now, try to solve the following question through the above guidelines."}] + messages
     
     try:
         # First tokenize without moving to device
@@ -114,7 +117,7 @@ async def generate_stream(messages: List[Dict[str, str]], max_new_tokens: int = 
                 outputs = model.generate(
                     input_ids,
                     max_new_tokens=1,
-                    temperature=0.7,
+                    temperature=0.8,
                     top_p=0.95,
                     do_sample=True,
                     pad_token_id=tokenizer.eos_token_id,

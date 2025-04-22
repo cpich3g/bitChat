@@ -1,4 +1,6 @@
 fastapi
 torch
 uvicorn
-git+https://github.com/shumingma/transformers.git
+huggingface-hub
+transformers
+# git+https://github.com/shumingma/transformers.git
