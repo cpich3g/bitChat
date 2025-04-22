@@ -57,9 +57,9 @@ const MessageList: React.FC<MessageListProps> = ({ messages, loading, streamingC
               <ReactMarkdown
                 components={{
                   // Custom renderer for thinking tokens
-                  think({ node, children, ...props }) {
-                    return <span className="thinking">{children}</span>;
-                  },
+                  think: ({ children }: { children: React.ReactNode }) => (
+                    <span className="thinking">{children}</span>
+                  ),
                   // Custom styling for code blocks
                   code({ node, className, children, ...props }) {
                     const match = /language-(\w+)/.exec(className || '');
@@ -87,7 +87,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, loading, streamingC
                       </div>
                     );
                   }
-                }}
+                } as any}
                 rehypePlugins={[rehypeRaw]}
               >
                 {processMarkdown(msg.content)}
