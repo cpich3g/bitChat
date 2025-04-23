@@ -95,7 +95,8 @@ const MessageList: React.FC<MessageListProps> = ({ messages, loading, streamingC
                     {solutionContent && (
                       <ReactMarkdown
                         components={{
-                          code: ({ inline, className, children, ...props }: React.ComponentPropsWithoutRef<"code">) => {
+                          // Use a more appropriate type for ReactMarkdown code component props
+                          code: ({ inline, className, children, ...props }: { inline?: boolean; className?: string; children: React.ReactNode }) => {
                             const match = /language-(\w+)/.exec(className || '');
                             // Ensure children is treated as a string array and joined
                             const codeContent = Array.isArray(children) ? children.join('') : String(children);
@@ -138,9 +139,10 @@ const MessageList: React.FC<MessageListProps> = ({ messages, loading, streamingC
                         <pre className="think-content">{fallback.thinkContent}</pre>
                       </details>
                     )}
-                    <ReactMarkdown
+                      <ReactMarkdown
                       components={{
-                        code: ({ inline, className, children, ...props }: React.ComponentPropsWithoutRef<"code">) => {
+                         // Use a more appropriate type for ReactMarkdown code component props
+                        code: ({ inline, className, children, ...props }: { inline?: boolean; className?: string; children: React.ReactNode }) => {
                           const match = /language-(\w+)/.exec(className || '');
                            // Ensure children is treated as a string array and joined
                            const codeContent = Array.isArray(children) ? children.join('') : String(children);
