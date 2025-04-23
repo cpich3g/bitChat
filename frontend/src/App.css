@@ -27,7 +27,8 @@
 }
 
 .message-content {
-  max-width: 80%;
+  width: fit-content; /* Size based on content */
+  max-width: 80%;    /* But don't exceed 80% */
   word-break: break-word;
   background: #23272f;
   color: #eaf0fa;
