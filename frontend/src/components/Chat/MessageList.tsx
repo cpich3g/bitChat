@@ -95,17 +95,17 @@ const MessageList: React.FC<MessageListProps> = ({ messages, loading, streamingC
                     {solutionContent && (
                       <ReactMarkdown
                         components={{
-                          // Use a more appropriate type for ReactMarkdown code component props
-                          code: ({ inline, className, children, ...props }: { inline?: boolean; className?: string; children: React.ReactNode }) => {
+                          // Use the type from react-markdown components API, or let TS infer
+                          code(props) {
+                            const { inline, className, children, ...rest } = props as any;
                             const match = /language-(\w+)/.exec(className || '');
-                            // Ensure children is treated as a string array and joined
                             const codeContent = Array.isArray(children) ? children.join('') : String(children);
                             if (inline) {
-                              return <code className={className} {...props}>{codeContent.replace(/\n$/, '')}</code>;
+                              return <code className={className} {...rest}>{codeContent.replace(/\n$/, '')}</code>;
                             }
                             return (
                               <pre>
-                                <code className={match ? `language-${match[1]}` : className} {...props}>
+                                <code className={match ? `language-${match[1]}` : className} {...rest}>
                                   {codeContent.replace(/\n$/, '')}
                                 </code>
                               </pre>
@@ -141,17 +141,17 @@ const MessageList: React.FC<MessageListProps> = ({ messages, loading, streamingC
                     )}
                       <ReactMarkdown
                       components={{
-                         // Use a more appropriate type for ReactMarkdown code component props
-                        code: ({ inline, className, children, ...props }: { inline?: boolean; className?: string; children: React.ReactNode }) => {
+                        // Use the type from react-markdown components API, or let TS infer
+                        code(props) {
+                          const { inline, className, children, ...rest } = props as any;
                           const match = /language-(\w+)/.exec(className || '');
-                           // Ensure children is treated as a string array and joined
-                           const codeContent = Array.isArray(children) ? children.join('') : String(children);
+                          const codeContent = Array.isArray(children) ? children.join('') : String(children);
                           if (inline) {
-                            return <code className={className} {...props}>{codeContent.replace(/\n$/, '')}</code>;
+                            return <code className={className} {...rest}>{codeContent.replace(/\n$/, '')}</code>;
                           }
                           return (
                             <pre>
-                              <code className={match ? `language-${match[1]}` : className} {...props}>
+                              <code className={match ? `language-${match[1]}` : className} {...rest}>
                                 {codeContent.replace(/\n$/, '')}
                               </code>
                             </pre>
