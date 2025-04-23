@@ -1,3 +1,102 @@
+/* --- Chat app UI core styles --- */
+
+.chat-messages {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem 0 8rem 0;
+  overflow-y: auto;
+  min-height: 400px;
+}
+
+.message {
+  width: 100%;
+  display: flex;
+  margin-bottom: 1rem;
+}
+
+.message.user {
+  justify-content: flex-end;
+}
+
+.message.assistant {
+  justify-content: flex-start;
+}
+
+.message-content {
+  max-width: 80%;
+  word-break: break-word;
+  background: #23272f;
+  color: #eaf0fa;
+  border-radius: 16px;
+  padding: 1.1rem 1.5rem;
+  margin-right: 0.5em;
+  margin-left: 0.5em;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.message.user .message-content {
+  background: #1d3d73;
+  color: #fff;
+  border-top-right-radius: 4px;
+  margin-left: 10%;
+  margin-right: 0;
+}
+
+.message.assistant .message-content {
+  background: #23272f;
+  color: #eaf0fa;
+  border-top-left-radius: 4px;
+  margin-right: 10%;
+  margin-left: 0;
+}
+
+/* --- Thinking process (details block) styling --- */
+.thinking-process {
+  margin-bottom: 0.5rem;
+  margin-top: 0.25rem;
+  background: #22252d;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(10,14,25,0.07);
+  padding: 0.25rem 1.25rem 0.8rem 1.25rem;
+  font-size: 0.97rem;
+  color: #b2becd;
+  border-left: 3px solid #3072d3;
+}
+
+.thinking-process summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #47a7fb;
+  margin: 0.7em 0 0.2em 0;
+  outline: none;
+  user-select: none;
+}
+
+.thinking-process[open] {
+  background: #191b1e;
+  color: #b2becd;
+  border-left-color: #44e1ff;
+}
+
+.think-content {
+  font-family: 'Fira Mono', 'Menlo', 'Consolas', monospace;
+  margin-top: 0.4em;
+  margin-bottom: 0.1em;
+  background: transparent;
+  color: #d7e5f9;
+  padding: 0.2em 0.2em 0 0.2em;
+  border: none;
+  font-size: 0.96em;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
 /* Expand/collapse summary label logic for thinking process */
 .thinking-process[open] .details-summary-default {
   display: none;
