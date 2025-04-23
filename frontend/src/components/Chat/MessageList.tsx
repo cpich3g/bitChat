@@ -81,7 +81,14 @@ const MessageList: React.FC<MessageListProps> = ({ messages, loading, streamingC
                   <>
                     {thinkContent && (
                       <details className="thinking-process">
-                        <summary>Thinking Process</summary>
+                        <summary>
+                          <span className="details-summary-default">
+                            Show Thoughts
+                          </span>
+                          <span className="details-summary-open">
+                            Hide Thoughts
+                          </span>
+                        </summary>
                         <pre className="think-content">{thinkContent}</pre>
                       </details>
                     )}
