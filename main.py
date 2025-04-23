@@ -81,7 +81,7 @@ except Exception as e:
 
 
 def generate_response(messages: List[Dict[str, str]], max_new_tokens: int = 4096) -> str:
-    # Create a system message if one doesn't exist
+    # Ensure there is a system prompt
     has_system = any(msg["role"] == "system" for msg in messages)
     if not has_system:
         messages = [{
@@ -96,41 +96,22 @@ def generate_response(messages: List[Dict[str, str]], max_new_tokens: int = 4096
         return error_msg
 
     try:
-        # First tokenize without moving to device
         print("generate_response: Model name:", getattr(model, 'name_or_path', 'N/A'))
         print("generate_response: Tokenizer name:", getattr(tokenizer, 'name_or_path', 'N/A'))
 
-        # Manual prompt construction (no chat template)
-        sys_msg = ""
-        user_msg = ""
-        for m in messages:
-            if m["role"] == "system":
-                sys_msg = m["content"]
-            elif m["role"] == "user":
-                user_msg = m["content"]
+        # Use chat template (recommended by user)
+        chat_input = tokenizer.apply_chat_template(
+            messages,
+            tokenize=True,
+            add_generation_prompt=True,
+            return_tensors="pt"
+        ).to(device)
 
-        # Phi-4 and similar models require a chat template with special tokens.
-        prompt = (
-            "<|im_start|>system\n"
-            f"{sys_msg.strip()}\n"
-            "<|im_end|>\n"
-            "<|im_start|>user\n"
-            f"{user_msg.strip()}\n"
-            "<|im_end|>\n"
-            "<|im_start|>assistant\n"
-        )
-        print("Manual prompt for PHI model:", prompt)
-
-        enc = tokenizer(prompt, return_tensors="pt")
-        input_ids = enc.input_ids.to(device)
-        attention_mask = enc.attention_mask.to(device) if hasattr(enc, "attention_mask") else None
-
-        print(f"Input tensor shape: {input_ids.shape}")
+        print(f"Input tensor shape: {chat_input.shape}")
 
         with torch.inference_mode():
             outputs = model.generate(
-                input_ids,
-                attention_mask=attention_mask,
+                chat_input,
                 max_new_tokens=max_new_tokens,
                 temperature=0.8,
                 top_p=0.95,
@@ -139,17 +120,16 @@ def generate_response(messages: List[Dict[str, str]], max_new_tokens: int = 4096
             )
         print("generate_response: model.generate() finished.")
 
-        # Decode only newly generated part
-        response = tokenizer.decode(outputs[0][input_ids.shape[1]:], skip_special_tokens=True)
-        print("generate_response: Decoded raw response:", response)
-        # Reverted: No longer removing the <think> block here
-        # import re
-        # response_processed = re.sub(r"<think>.*?</think>\s*", "", response_raw, flags=re.DOTALL).strip()
-        
-        if response.strip() == "<|endoftext|>":
-             print("WARNING: Model outputed only <|endoftext|> EOS token. Raw response was:", response)
-        print(f"Generated response: {response}") # Log the original response
-        return response # Return the original response
+        # Decode entire assistant output, including special tokens/formatting
+        assistant_output = tokenizer.decode(
+            outputs[0][chat_input.shape[-1]:], skip_special_tokens=False
+        )
+        print("generate_response: Assistant output (raw):", assistant_output)
+
+        if assistant_output.strip() == "<|endoftext|>":
+            print("WARNING: Model outputed only <|endoftext|> EOS token. Raw response was:", assistant_output)
+        print(f"Generated response: {assistant_output}")
+        return assistant_output
 
     except Exception as e:
         print(f"Error in generate_response: {str(e)}")

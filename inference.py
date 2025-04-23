@@ -19,5 +19,6 @@ chat_input = tokenizer.apply_chat_template(messages, tokenize=True, add_generati
 
 # Generate response
 chat_outputs = model.generate(chat_input, max_new_tokens=50)
-response = tokenizer.decode(chat_outputs[0][chat_input.shape[-1]:], skip_special_tokens=True) # Decode only the response part
-print("\nAssistant Response:", response)
+# Decode and print the entire assistant output, including special tokens and formatting
+assistant_output = tokenizer.decode(chat_outputs[0][chat_input.shape[-1]:], skip_special_tokens=False)
+print(assistant_output)
