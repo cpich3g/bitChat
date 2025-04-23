@@ -249,8 +249,20 @@ async def generate_stream(messages: List[Dict[str, str]], max_new_tokens: int = 
 
 @app.post("/chat")
 def chat_endpoint(request: ChatRequest):
-    response = generate_response(request.messages, request.max_new_tokens)
-    return {"response": response}
+    full_output = generate_response(request.messages, request.max_new_tokens)
+    # Extract only the Solution part (after </think>)
+    solution = ""
+    if full_output:
+        think_tag = "</think>"
+        idx = full_output.find(think_tag)
+        if idx != -1:
+            solution = full_output[idx + len(think_tag):].strip()
+        else:
+            solution = full_output.strip()  # fallback if structure is broken
+    return {
+        "full_output": full_output,
+        "solution": solution,
+    }
 
 @app.post("/chat/stream")
 async def chat_stream_endpoint(request: ChatRequest):

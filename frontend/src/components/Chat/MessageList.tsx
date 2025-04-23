@@ -72,61 +72,93 @@ const MessageList: React.FC<MessageListProps> = ({ messages, loading, streamingC
         <div key={idx} className={`message ${msg.role}`}>
           <div className="message-content">
             {msg.role === 'assistant' ? (() => {
-              const { thinkContent, solutionContent } = parseContent(msg.content);
-              return (
-                <>
-                  {thinkContent && (
-                    <details className="thinking-process">
-                      <summary>Thinking Process</summary>
-                      {/* Render think content as preformatted text for now */}
-                      <pre className="think-content">{thinkContent}</pre>
-                      {/* Optionally use ReactMarkdown for think content too:
-                      <ReactMarkdown rehypePlugins={[rehypeRaw]}>
-                        {thinkContent}
-                      </ReactMarkdown> 
-                      */}
-                    </details>
-                  )}
-                  <ReactMarkdown
-                    components={
-                      {
-                    // Custom styling for code blocks - Simplified props type
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    code: ({ inline, className, children }: any) => { // Removed unused ...props
-                      const match = /language-(\w+)/.exec(className || '');
-                      // Removed unused variables: const { node, ...restProps } = props;
-                      if (inline) {
-                        // Pass only className for inline code
-                        return <code className={className}>{String(children).replace(/\n$/, '')}</code>;
-                      }
-                      // Pass only className to the inner code block
-                      return (
-                        <pre> {/* Avoid spreading potentially incompatible props */}
-                          <code className={match ? `language-${match[1]}` : className}>
-                            {String(children).replace(/\n$/, '')}
-                          </code>
-                        </pre>
-                      );
-                    },
-                    // Better table rendering - Simplified props type
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    table: ({ children, ...props }: any) => {
-                      // Filter out potentially problematic props like 'node'
-                      const { node, ...restProps } = props; // Remove 'node' from destructuring
-                      return (
-                        <div className="table-container">
-                          <table {...restProps}>{children}</table>
-                        </div>
-                      );
-                    }
-                  } satisfies Components // Use 'satisfies' for better type checking without casting
-                }
-                    rehypePlugins={[rehypeRaw]}
-                  >
-                    {processSolutionMarkdown(solutionContent)}
-                  </ReactMarkdown>
-                </>
-              );
+              // Use explicit props if present (preferred: coming from API), else fallback
+              const thinkContent = msg.thinking ?? null;
+              const solutionContent = msg.solution ?? null;
+              // If neither present, fall back to parseContent
+              if (thinkContent !== null || solutionContent !== null) {
+                return (
+                  <>
+                    {thinkContent && (
+                      <details className="thinking-process">
+                        <summary>Thinking Process</summary>
+                        <pre className="think-content">{thinkContent}</pre>
+                      </details>
+                    )}
+                    {solutionContent && (
+                      <ReactMarkdown
+                        components={{
+                          code: ({ inline, className, children }: any) => {
+                            const match = /language-(\w+)/.exec(className || '');
+                            if (inline) {
+                              return <code className={className}>{String(children).replace(/\n$/, '')}</code>;
+                            }
+                            return (
+                              <pre>
+                                <code className={match ? `language-${match[1]}` : className}>
+                                  {String(children).replace(/\n$/, '')}
+                                </code>
+                              </pre>
+                            );
+                          },
+                          table: ({ children, ...props }: any) => {
+                            const { node, ...restProps } = props;
+                            return (
+                              <div className="table-container">
+                                <table {...restProps}>{children}</table>
+                              </div>
+                            );
+                          },
+                        } satisfies Components}
+                        rehypePlugins={[rehypeRaw]}
+                      >
+                        {processSolutionMarkdown(solutionContent)}
+                      </ReactMarkdown>
+                    )}
+                  </>
+                );
+              } else {
+                // fallback: parse out thinking/solution from content
+                const fallback = parseContent(msg.content);
+                return (
+                  <>
+                    {fallback.thinkContent && (
+                      <details className="thinking-process">
+                        <summary>Thinking Process</summary>
+                        <pre className="think-content">{fallback.thinkContent}</pre>
+                      </details>
+                    )}
+                    <ReactMarkdown
+                      components={{
+                        code: ({ inline, className, children }: any) => {
+                          const match = /language-(\w+)/.exec(className || '');
+                          if (inline) {
+                            return <code className={className}>{String(children).replace(/\n$/, '')}</code>;
+                          }
+                          return (
+                            <pre>
+                              <code className={match ? `language-${match[1]}` : className}>
+                                {String(children).replace(/\n$/, '')}
+                              </code>
+                            </pre>
+                          );
+                        },
+                        table: ({ children, ...props }: any) => {
+                          const { node, ...restProps } = props;
+                          return (
+                            <div className="table-container">
+                              <table {...restProps}>{children}</table>
+                            </div>
+                          );
+                        },
+                      } satisfies Components}
+                      rehypePlugins={[rehypeRaw]}
+                    >
+                      {processSolutionMarkdown(fallback.solutionContent)}
+                    </ReactMarkdown>
+                  </>
+                );
+              }
             })() : (
               msg.content // User messages are displayed directly
             )}

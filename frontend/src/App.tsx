@@ -106,9 +106,19 @@ function App() {
         
         setMessages(prev => {
           const updatedMessages = [...prev];
+          // data: { full_output, solution }
+          let thinking = null;
+          if (data.full_output && typeof data.full_output === "string") {
+            const thinkMatch = data.full_output.match(/<think>(.*?)<\/think>/s);
+            if (thinkMatch && thinkMatch[1]) {
+              thinking = thinkMatch[1].trim();
+            }
+          }
           updatedMessages[updatedMessages.length - 1] = {
-            role: "assistant", 
-            content: data.response
+            role: "assistant",
+            content: data.full_output ?? data.solution ?? "",
+            thinking,
+            solution: typeof data.solution === "string" ? data.solution : (data.full_output ?? "")
           };
           return updatedMessages;
         });
