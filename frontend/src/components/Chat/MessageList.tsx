@@ -95,21 +95,24 @@ const MessageList: React.FC<MessageListProps> = ({ messages, loading, streamingC
                     {solutionContent && (
                       <ReactMarkdown
                         components={{
-                          code: ({ inline, className, children }: any) => {
+                          code: ({ inline, className, children, ...props }: React.ComponentPropsWithoutRef<"code">) => {
                             const match = /language-(\w+)/.exec(className || '');
+                            // Ensure children is treated as a string array and joined
+                            const codeContent = Array.isArray(children) ? children.join('') : String(children);
                             if (inline) {
-                              return <code className={className}>{String(children).replace(/\n$/, '')}</code>;
+                              return <code className={className} {...props}>{codeContent.replace(/\n$/, '')}</code>;
                             }
                             return (
                               <pre>
-                                <code className={match ? `language-${match[1]}` : className}>
-                                  {String(children).replace(/\n$/, '')}
+                                <code className={match ? `language-${match[1]}` : className} {...props}>
+                                  {codeContent.replace(/\n$/, '')}
                                 </code>
                               </pre>
                             );
                           },
-                          table: ({ children, ...props }: any) => {
-                            const { node, ...restProps } = props;
+                          table: ({ children, ...props }: React.ComponentPropsWithoutRef<"table">) => {
+                            // Removed unused 'node' from destructuring
+                            const { ...restProps } = props;
                             return (
                               <div className="table-container">
                                 <table {...restProps}>{children}</table>
@@ -137,21 +140,24 @@ const MessageList: React.FC<MessageListProps> = ({ messages, loading, streamingC
                     )}
                     <ReactMarkdown
                       components={{
-                        code: ({ inline, className, children }: any) => {
+                        code: ({ inline, className, children, ...props }: React.ComponentPropsWithoutRef<"code">) => {
                           const match = /language-(\w+)/.exec(className || '');
+                           // Ensure children is treated as a string array and joined
+                           const codeContent = Array.isArray(children) ? children.join('') : String(children);
                           if (inline) {
-                            return <code className={className}>{String(children).replace(/\n$/, '')}</code>;
+                            return <code className={className} {...props}>{codeContent.replace(/\n$/, '')}</code>;
                           }
                           return (
                             <pre>
-                              <code className={match ? `language-${match[1]}` : className}>
-                                {String(children).replace(/\n$/, '')}
+                              <code className={match ? `language-${match[1]}` : className} {...props}>
+                                {codeContent.replace(/\n$/, '')}
                               </code>
                             </pre>
                           );
                         },
-                        table: ({ children, ...props }: any) => {
-                          const { node, ...restProps } = props;
+                        table: ({ children, ...props }: React.ComponentPropsWithoutRef<"table">) => {
+                           // Removed unused 'node' from destructuring
+                           const { ...restProps } = props;
                           return (
                             <div className="table-container">
                               <table {...restProps}>{children}</table>
